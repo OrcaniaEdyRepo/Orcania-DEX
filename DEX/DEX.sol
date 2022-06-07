@@ -51,9 +51,14 @@ contract DEX is IDEX, OrcaniaMath{
     IERC20 OCA;
     address private OCAaddress;
 
+    //Tokens on the DEX can only provide liqudity in OCA (Token-OCA)
+    //The token's OCA balance is recorded in the contract is _tokenOCAbalance, and it's own balance is fetched using token.balanceOf(dex)
     mapping(address => uint256) private _tokenOCAbalance; //OCA this token has as liquidity
-    mapping(address => uint256) private _totalPoints;
 
+    //When providing liqudity, users receive liquidity points of the token they are providing liquidity to
+    //Below we record the total points of the token, user's points in this token and others, user's allowance for others to use his points
+    //Points act like internal ERC20 tokens in the DEX, so users can transfer them and approve them
+    mapping(address/*token*/ => uint256) private _totalPoints;
     mapping(address/*user*/ => mapping(address/*token*/ => uint256)) private _points;//Users liquidity points in this token
     mapping(address/*owner*/ => mapping(address/*spender*/ => mapping(address/*token*/ => uint256/*amount*/))) private _allowances;
 
@@ -77,102 +82,6 @@ contract DEX is IDEX, OrcaniaMath{
         tokenOCAbalance = _tokenOCAbalance[token];
         totalPoints = _totalPoints[token];
     }
-
-    function getAmountOut(address tokenIn, address tokenOut ,uint256 amountIn) external view returns (uint256) {
-        require(tokenIn != tokenOut);
-
-        uint256 balance1; uint256 balance2;
-
-        if(tokenIn == address(0)) {balance1 = address(this).balance;}
-        else if(tokenIn != OCAaddress) {balance1 = IERC20(tokenIn).balanceOf(address(this));}
-        
-        if(tokenOut == address(0)) {balance2 = address(this).balance;}
-        else if(tokenOut != OCAaddress) {balance2 = IERC20(tokenOut).balanceOf(address(this));}
-
-        if(tokenIn == OCAaddress) {
-            return mul(amountIn, balance2, 999) / mul( add(_tokenOCAbalance[tokenOut], amountIn), 1000);
-        }
-        else if(tokenOut == OCAaddress) {
-            return mul(amountIn, _tokenOCAbalance[tokenIn], 999) / mul( add(balance1, amountIn), 1000);
-        }
-        else {
-            amountIn = mul(amountIn, _tokenOCAbalance[tokenIn], 999) / mul( add(balance1, amountIn), 1000);
-
-            return mul(amountIn, balance2, 999) / mul( add(_tokenOCAbalance[tokenOut], amountIn), 1000);
-        }
-
-    }
-
-    function getAmountIn(address tokenIn, address tokenOut, uint256 amountOut) external view returns (uint256) {
-        require(tokenIn != tokenOut);
-
-        if(tokenOut == address(0)) {require(address(this).balance > amountOut, "INSUFFICIENT_LIQUIDITY");}
-        if(tokenOut == OCAaddress) {require(_tokenOCAbalance[tokenIn] > amountOut, "INSUFFICIENT_LIQUIDITY");}
-        require(IERC20(tokenOut).balanceOf(address(this)) > amountOut, "INSUFFICIENT_LIQUIDITY");
-
-        uint256 balance1; uint256 balance2;
-
-        if(tokenIn == address(0)) {balance1 = address(this).balance;}
-        else if(tokenIn != OCAaddress) {balance1 = IERC20(tokenIn).balanceOf(address(this));}
-        
-        if(tokenOut == address(0)) {balance2 = address(this).balance;}
-        else if(tokenOut != OCAaddress) {balance2 = IERC20(tokenOut).balanceOf(address(this));}
-
-        if(tokenIn == OCAaddress) {
-            return  ( mul(amountOut, _tokenOCAbalance[tokenOut], 1000) / sub(mul(999, balance2), mul(1000, amountOut)) ) + 1;
-        }
-        else if(tokenOut == OCAaddress) {
-            return ( mul(amountOut, balance1, 1000) / sub(mul(999, _tokenOCAbalance[tokenIn]), mul(1000, amountOut)) ) + 1;
-        }
-        else {
-            uint256 OCA = this.getAmountIn(OCAaddress, tokenOut, amountOut);
-            return this.getAmountIn(tokenIn, OCAaddress, OCA);
-        }
-    }
-
-    function priceImpact(address tokenIn, address tokenOut, uint256 amountIn) external view returns (uint256) {
-        require(tokenIn != tokenOut);
-
-        uint256 balance1; uint256 balance2;
-
-        if(tokenIn == address(0)) {balance1 = address(this).balance;}
-        else if(tokenIn != OCAaddress) {balance1 = IERC20(tokenIn).balanceOf(address(this));}
-        
-        if(tokenOut == address(0)) {balance2 = address(this).balance;}
-        else if(tokenOut != OCAaddress) {balance2 = IERC20(tokenOut).balanceOf(address(this));}
-
-        uint256 amountOut = this.getAmountOut(tokenIn, tokenOut, amountIn);
-        uint256 unaffectedPrice;
-
-        if(tokenIn == OCAaddress) {
-            unaffectedPrice = mul(amountIn, balance2, 999) / mul(_tokenOCAbalance[tokenOut], 1000);
-        }
-        else if(tokenOut == OCAaddress) {
-            unaffectedPrice = mul(amountIn, _tokenOCAbalance[tokenIn], 999) / mul(balance1, 1000);
-        }
-        else {
-            amountIn = mul(amountIn, _tokenOCAbalance[tokenIn], 999) / mul(balance1, 1000);
-
-            unaffectedPrice = mul(amountIn, balance2, 999) / mul(_tokenOCAbalance[tokenOut], 1000);
-        }
-
-        uint256 difference = unaffectedPrice - amountOut;
-
-        return mul(difference, 10000) / unaffectedPrice;
-    }
-
-    // function isLiquidityEnough(address token, uint256 amount) external view returns(bool) {
-    //     uint256 contractTokenBalance;
-        
-    //     if(token == address(0)) {contractTokenBalance = address(this).balance;}
-    //     else{contractTokenBalance = IERC20(token).balanceOf(address(this));}
-
-    //     uint256 neededOCA = mul(_tokenOCAbalance[token], amount) / contractTokenBalance;
-    //     uint256 earnedPoints = mul(_totalPoints[token], amount) / contractTokenBalance;
-
-    //     if (neededOCA == 0 || earnedPoints == 0) {return false;}
-    //     return true;
-    // }
 
     //Write Functions =================================================================================================================================
     function swapTokenForOCA(address token, uint256 amountIn, uint256 minAmountOut, uint256 deadLine) external {
@@ -252,6 +161,7 @@ contract DEX is IDEX, OrcaniaMath{
         require(payable(msg.sender).send(amountOut), "FAILED_TO_SEND_ONE");    
     }
 
+    //When setting liquidity of a token for the first time, the amount of points per token-OCA provided is equal to OCAamount
     function setLiquidity(address token, uint256 amount, uint256 OCAamount) external {
         require(amount > 0 && OCAamount > 0, "INSUFFICIENT_AMOUNT");
         require(_totalPoints[token] == 0, "LIQUIDITY_ALREADY_SET");
@@ -310,7 +220,7 @@ contract DEX is IDEX, OrcaniaMath{
         emit WithdrawLiquidity(msg.sender, token, points);    
     }
 
-    function setONELiquidity(uint256 OCAamount) external payable {
+    function setCoinLiquidity(uint256 OCAamount) external payable {
         require(msg.value > 0 && OCAamount > 0, "INSUFFICIENT_AMOUNT");
         require(_totalPoints[address(0)] == 0, "LIQUIDITY_ALREADY_SET");
 
@@ -326,7 +236,7 @@ contract DEX is IDEX, OrcaniaMath{
             
         emit SetLiquidity(msg.sender, address(0), msg.value, OCAamount);
     }
-    function addONELiquidity() external payable {
+    function addCoinLiquidity() external payable {
         require(msg.value > 0, "INSUFFICIENT_AMOUNT");
 
         require(_totalPoints[address(0)] != 0, "LIQUIDITY_NOT_SET");
@@ -347,7 +257,7 @@ contract DEX is IDEX, OrcaniaMath{
             
         emit AddLiquidity(msg.sender, address(0), userPoints);
     }
-    function withdrawONELiquidity(uint256 points) external  {
+    function withdrawCoinLiquidity(uint256 points) external  {
         require(points > 0, "INSUFFICIENT_AMOUNT");
         require((_points[msg.sender][address(0)] -= points) <= (uint256(-1) - points), "INSUFFICIENT_BALANCE");
 
@@ -410,15 +320,6 @@ contract DEX is IDEX, OrcaniaMath{
             
         emit Swap(msg.sender, OCAaddress, token, amountIn, amountOut);
     }
-
-
-    // function SwapCoinForOCA(uint256 amountIn) internal returns(uint256 amountOut) {
-    //     amountOut = (amountIn * _tokenOCAbalance[address(0)] * 999) / (address(this).balance * 1000);
-
-    //     _tokenOCAbalance[address(0)] -= amountOut;
-
-    //     emit Swap(msg.sender, address(0), OCAaddress, amountIn, amountOut);
-    // }
 
     function SwapCoinForOCA() internal returns(uint256 amountOut) {
         amountOut = (msg.value * _tokenOCAbalance[address(0)] * 999) / (address(this).balance * 1000);
