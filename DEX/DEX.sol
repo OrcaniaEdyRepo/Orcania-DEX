@@ -53,6 +53,7 @@ contract DEX is IDEX, OrcaniaMath{
 
     //Tokens on the DEX can only provide liqudity in OCA (Token-OCA)
     //The token's OCA balance is recorded in the contract is _tokenOCAbalance, and it's own balance is fetched using token.balanceOf(dex)
+    //If the token in question is the coin of the blockchain, we fetch its liqudiity bychecking the balance of the contract address(this).balance
     mapping(address => uint256) private _tokenOCAbalance; //OCA this token has as liquidity
 
     //When providing liqudity, users receive liquidity points of the token they are providing liquidity to
