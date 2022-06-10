@@ -53,7 +53,6 @@ contract DEX is IDEX, OrcaniaMath{
 
     //Tokens on the DEX can only provide liqudity in OCA (Token-OCA)
     //The token's OCA balance is recorded in the contract is _tokenOCAbalance, and it's own balance is fetched using token.balanceOf(dex)
-    //If the token in question is the coin of the blockchain, we fetch its liqudiity bychecking the balance of the contract address(this).balance
     mapping(address => uint256) private _tokenOCAbalance; //OCA this token has as liquidity
 
     //When providing liqudity, users receive liquidity points of the token they are providing liquidity to
@@ -85,38 +84,38 @@ contract DEX is IDEX, OrcaniaMath{
     }
 
     //Write Functions =================================================================================================================================
-    function swapTokenForOCA(address token, uint256 amountIn, uint256 minAmountOut, uint256 deadLine) external {
+    function swapTokenForOCA(address tokenIn, uint256 amountIn, uint256 minAmountOut, uint256 deadLine) external {
         require(block.timestamp < deadLine, "OUT_OF_TIME");
             
-        IERC20(token).transferFrom(msg.sender, address(this), amountIn);
+        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
 
-        uint256 amountOut = SwapTokenForOCA(token, amountIn);
+        uint256 amountOut = SwapTokenForOCA(tokenIn, amountIn);
 
         require(amountOut >= minAmountOut, "INSUFFICIENT_OUTPUT_AMOUNT");
         OCA.transfer(msg.sender, amountOut);
     } 
-    function swapTokenForToken(address token, address tokenIn, uint256 amountIn, uint256 minAmountOut, uint256 deadLine) external {
+    function swapTokenForToken(address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, uint256 deadLine) external {
         require(block.timestamp < deadLine, "OUT_OF_TIME");
 
-        IERC20(token).transferFrom(msg.sender, address(this), amountIn);
+        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
 
-        uint256 amountOut = SwapTokenForOCA(token, amountIn);
-        uint256 amountOut1 = SwapOCAForToken(tokenIn, amountOut);
+        uint256 amountOut = SwapTokenForOCA(tokenIn, amountIn);
+        uint256 amountOut1 = SwapOCAForToken(tokenOut, amountOut);
 
         require(amountOut1 >= minAmountOut, "INSUFFICIENT_OUTPUT_AMOUNT");
-        IERC20(tokenIn).transfer(msg.sender, amountOut1);
+        IERC20(tokenOut).transfer(msg.sender, amountOut1);
     }
-    function swapTokenForCoin(address token, uint256 amountIn, uint256 minAmountOut, uint256 deadLine) external {
+    function swapTokenForCoin(address tokenIn, uint256 amountIn, uint256 minAmountOut, uint256 deadLine) external {
         require(block.timestamp < deadLine, "OUT_OF_TIME");
 
-        IERC20(token).transferFrom(msg.sender, address(this), amountIn);
+        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
 
-        uint256 amountOut = SwapTokenForOCA(token, amountIn);
+        uint256 amountOut = SwapTokenForOCA(tokenIn, amountIn);
         uint256 amountOut1 = SwapOCAForCoin(amountOut);
 
         require(amountOut1 >= minAmountOut, "INSUFFICIENT_OUTPUT_AMOUNT");
 
-        require(payable(msg.sender).send(amountOut1), "FAILED_TO_SEND_ONE");
+        require(payable(msg.sender).send(amountOut1), "FAILED_TO_SEND_COIN");
     }
 
     function swapCoinForOCA(uint256 minAmountOut, uint256 deadLine) external payable {
@@ -139,16 +138,16 @@ contract DEX is IDEX, OrcaniaMath{
         IERC20(tokenIn).transfer(msg.sender, amountOut1);
     }
 
-    function swapOCAForToken(address token, uint256 amountIn, uint256 minAmountOut, uint256 deadLine) external {
+    function swapOCAForToken(address tokenIn, uint256 amountIn, uint256 minAmountOut, uint256 deadLine) external {
         require(block.timestamp < deadLine, "OUT_OF_TIME");
             
         OCA.transferFrom(msg.sender, address(this), amountIn);
 
-        uint256 amountOut = SwapOCAForToken(token, amountIn);
+        uint256 amountOut = SwapOCAForToken(tokenIn, amountIn);
 
         require(amountOut >= minAmountOut, "INSUFFICIENT_OUTPUT_AMOUNT");
 
-        IERC20(token).transfer(msg.sender, amountOut);
+        IERC20(tokenIn).transfer(msg.sender, amountOut);
     }
     function swapOCAForCoin(uint256 amountIn, uint256 minAmountOut, uint256 deadLine) external {
         require(block.timestamp < deadLine, "OUT_OF_TIME");
@@ -159,7 +158,7 @@ contract DEX is IDEX, OrcaniaMath{
 
         require(amountOut >= minAmountOut, "INSUFFICIENT_OUTPUT_AMOUNT");
 
-        require(payable(msg.sender).send(amountOut), "FAILED_TO_SEND_ONE");    
+        require(payable(msg.sender).send(amountOut), "FAILED_TO_SEND_COIN");    
     }
 
     //When setting liquidity of a token for the first time, the amount of points per token-OCA provided is equal to OCAamount
@@ -270,7 +269,7 @@ contract DEX is IDEX, OrcaniaMath{
             
         _tokenOCAbalance[address(0)] -= cfcAmount;
 
-        require(payable(msg.sender).send(tokenAmount), "FAILED_TO_SEND_ONE");
+        require(payable(msg.sender).send(tokenAmount), "FAILED_TO_SEND_COIN");
         OCA.transfer(msg.sender, cfcAmount);
 
         emit WithdrawLiquidity(msg.sender, address(0), points);
