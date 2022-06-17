@@ -49,7 +49,7 @@ abstract contract OrcaniaMath {
 contract DEX is IDEX, OrcaniaMath{
     
     IERC20 OCA;
-    address private OCAaddress;
+    address immutable OCAaddress;
 
     //Tokens on the DEX can only provide liqudity in OCA (Token-OCA)
     //The token's OCA balance is recorded in the contract is _tokenOCAbalance, and it's own balance is fetched using token.balanceOf(dex)
