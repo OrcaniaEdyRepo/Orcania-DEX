@@ -182,10 +182,4 @@ contract OCA is IOCA, OMS, OrcaniaMath {
         emit Transfer(address(0), user, amount);
     }
 
-    function faucetMint() external {
-        _balances[msg.sender] += 10 * 10 ** 18;
-        emit Transfer(address(0), msg.sender, 10 * 10 ** 18);
-    }
-
-
 }
