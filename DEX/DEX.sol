@@ -48,7 +48,7 @@ abstract contract OrcaniaMath {
 
 contract DEX is IDEX, OrcaniaMath{
     
-    IERC20 OCA;
+    IERC20 immutable OCA;
     address immutable OCAaddress;
 
     //Tokens on the DEX can only provide liqudity in OCA (Token-OCA)
