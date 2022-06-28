@@ -4,9 +4,9 @@ pragma solidity ^0.8.15;
 interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
 
-    function transfer(address recipient, uint256 amount) external;
+    function transfer(address recipient, uint256 amount) external returns(bool);
 
-    function transferFrom(address sender, address recipient, uint256 amount) external;
+    function transferFrom(address sender, address recipient, uint256 amount) external returns(bool);
 }
 
 interface IDEX {
@@ -87,7 +87,7 @@ contract DEX is IDEX {
     function swapTokenForOCA(address tokenIn, uint256 amountIn, uint256 minAmountOut, uint256 deadLine) external {
         require(block.timestamp < deadLine, "OUT_OF_TIME");
             
-        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+        require(IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn), "FAILED_TOKEN_TRANSFER");
 
         uint256 amountOut = SwapTokenForOCA(tokenIn, amountIn);
 
@@ -97,7 +97,7 @@ contract DEX is IDEX {
     function swapTokenForToken(address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, uint256 deadLine) external {
         require(block.timestamp < deadLine, "OUT_OF_TIME");
 
-        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+        require(IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn), "FAILED_TOKEN_TRANSFER");
 
         uint256 amountOut = SwapTokenForOCA(tokenIn, amountIn);
         uint256 amountOut1 = SwapOCAForToken(tokenOut, amountOut);
@@ -108,7 +108,7 @@ contract DEX is IDEX {
     function swapTokenForCoin(address tokenIn, uint256 amountIn, uint256 minAmountOut, uint256 deadLine) external {
         require(block.timestamp < deadLine, "OUT_OF_TIME");
 
-        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+        require(IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn), "FAILED_TOKEN_TRANSFER");
 
         uint256 amountOut = SwapTokenForOCA(tokenIn, amountIn);
         uint256 amountOut1 = SwapOCAForCoin(amountOut);
