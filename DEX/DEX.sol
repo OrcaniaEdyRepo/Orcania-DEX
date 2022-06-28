@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.6;
+pragma solidity ^0.8.15;
 
 interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
@@ -21,32 +21,32 @@ interface IDEX {
 
 }
 
-abstract contract OrcaniaMath {
+// abstract contract OrcaniaMath {
 
-    function add(uint256 num1, uint256 num2) internal view returns(uint256 sum) {
-        sum = num1 + num2;
-        require(sum > num1, "OVERFLOW");
-    }
+//     function add(uint256 num1, uint256 num2) internal view returns(uint256 sum) {
+//         sum = num1 + num2;
+//         require(sum > num1, "OVERFLOW");
+//     }
 
-    function sub(uint256 num1, uint256 num2) internal view returns(uint256 out) {
-        out = num1 - num2;
-        require(num1 > out, "UNDERFLOW");
-    }
+//     function sub(uint256 num1, uint256 num2) internal view returns(uint256 out) {
+//         out = num1 - num2;
+//         require(num1 > out, "UNDERFLOW");
+//     }
 
-    function mul(uint256 num1, uint256 num2) internal view returns(uint256 out) {
-        out = num1 * num2;
-        require(out / num1 == num2, "OVERFLOW");
-    }
-    function mul(uint256 num1, uint256 num2, uint256 num3) internal view returns(uint256 out1) {
-        uint256 out = num1 * num2;
-        require(out / num1 == num2, "OVERFLOW");
-        out1 = out * num3;
-        require(out1 / out == num3, "OVERFLOW");
-    }
+//     function mul(uint256 num1, uint256 num2) internal view returns(uint256 out) {
+//         out = num1 * num2;
+//         require(out / num1 == num2, "OVERFLOW");
+//     }
+//     function mul(uint256 num1, uint256 num2, uint256 num3) internal view returns(uint256 out1) {
+//         uint256 out = num1 * num2;
+//         require(out / num1 == num2, "OVERFLOW");
+//         out1 = out * num3;
+//         require(out1 / out == num3, "OVERFLOW");
+//     }
 
-}
+// }
 
-contract DEX is IDEX, OrcaniaMath{
+contract DEX is IDEX {
     
     IERC20 immutable OCA;
     address immutable OCAaddress;
@@ -185,8 +185,8 @@ contract DEX is IDEX, OrcaniaMath{
         require(totalPoints > 0, "NO_INITIAL_lIQUIDITY_FOUND");
 
         uint256 contractTokenBalance = IERC20(token).balanceOf(address(this));
-        uint256 neededOCA = mul(_tokenOCAbalance[token], amount) / contractTokenBalance;
-        uint256 earnedPoints = mul(totalPoints, amount) / contractTokenBalance;
+        uint256 neededOCA = (_tokenOCAbalance[token] * amount) / contractTokenBalance;
+        uint256 earnedPoints = (totalPoints * amount) / contractTokenBalance;
 
         require (neededOCA > 0 || earnedPoints > 0, "LOW_LIQUIDITY_ADDITION");
 
@@ -195,8 +195,8 @@ contract DEX is IDEX, OrcaniaMath{
 
         _tokenOCAbalance[token] += neededOCA;
 
-        _totalPoints[token] = add(totalPoints, earnedPoints);
-        uint256 userPoints = mul(earnedPoints, 9999) / 10000;
+        _totalPoints[token] = totalPoints + earnedPoints;
+        uint256 userPoints = (earnedPoints * 9999) / 10000;
 
         _points[msg.sender][token] += userPoints;
         _points[address(this)][token] += earnedPoints - userPoints;
@@ -204,11 +204,13 @@ contract DEX is IDEX, OrcaniaMath{
     }
     function withdrawLiquidity(address token, uint256 points) external {
         require(points > 0, "INSUFFICIENT_AMOUNT");
-        require((_points[msg.sender][token] -= points) <= (uint256(-1) - points), "INSUFFICIENT_BALANCE");
+        require(_points[msg.sender][token] >= points , "INSUFFICIENT_BALANCE");
+
+        _points[msg.sender][token] -= points;
 
         uint256 totalPoints = _totalPoints[token];
-        uint256 tokenAmount = mul(IERC20(token).balanceOf(address(this)), points) / totalPoints;
-        uint256 cfcAmount = mul(_tokenOCAbalance[token], points) / totalPoints;
+        uint256 tokenAmount = (IERC20(token).balanceOf(address(this)) * points) / totalPoints;
+        uint256 cfcAmount = (_tokenOCAbalance[token] * points) / totalPoints;
             
         _totalPoints[token] -= points;
             
@@ -241,16 +243,16 @@ contract DEX is IDEX, OrcaniaMath{
 
         require(_totalPoints[address(0)] != 0, "LIQUIDITY_NOT_SET");
         
-        uint256 neededOCA = mul(_tokenOCAbalance[address(0)], msg.value) / (address(this).balance - msg.value);
-        uint256 earnedPoints = mul(_totalPoints[address(0)], msg.value) / (address(this).balance - msg.value);
+        uint256 neededOCA = (_tokenOCAbalance[address(0)] * msg.value) / (address(this).balance - msg.value);
+        uint256 earnedPoints = (_totalPoints[address(0)] * msg.value) / (address(this).balance - msg.value);
 
         require (neededOCA > 0 && earnedPoints > 0, "LOW_LIQUIDITY-ADDITION");
         OCA.transferFrom(msg.sender, address(this), neededOCA);
 
         _tokenOCAbalance[address(0)] += neededOCA;
 
-        _totalPoints[address(0)] = add(_totalPoints[address(0)], earnedPoints);
-        uint256 userPoints = mul(earnedPoints, 9999) / 10000;
+        _totalPoints[address(0)] = _totalPoints[address(0)] + earnedPoints;
+        uint256 userPoints = (earnedPoints * 9999) / 10000;
 
         _points[msg.sender][address(0)] += userPoints;
         _points[address(this)][address(0)] += earnedPoints - userPoints;
@@ -259,11 +261,13 @@ contract DEX is IDEX, OrcaniaMath{
     }
     function withdrawCoinLiquidity(uint256 points) external  {
         require(points > 0, "INSUFFICIENT_AMOUNT");
-        require((_points[msg.sender][address(0)] -= points) <= (uint256(-1) - points), "INSUFFICIENT_BALANCE");
+        require(_points[msg.sender][address(0)] >= points, "INSUFFICIENT_BALANCE");
+
+        _points[msg.sender][address(0)] -= points;
 
         uint256 totalPoints = _totalPoints[address(0)];
-        uint256 tokenAmount = mul(address(this).balance, points) / totalPoints;
-        uint256 cfcAmount = mul(_tokenOCAbalance[address(0)], points) / totalPoints;
+        uint256 tokenAmount = (address(this).balance * points) / totalPoints;
+        uint256 cfcAmount = (_tokenOCAbalance[address(0)] * points) / totalPoints;
 
         _totalPoints[address(0)] -= points;
             
@@ -283,17 +287,21 @@ contract DEX is IDEX, OrcaniaMath{
     }
 
     function transferPoints(address receiver, address token, uint256 amount) external {
-        require((_points[msg.sender][token] -= amount) <= (uint256(-1) - amount), "INSUFFICIENT_BALANCE");
-           
+        require(_points[msg.sender][token] >= amount, "INSUFFICIENT_BALANCE");
+
+        _points[msg.sender][token] -= amount;
         _points[receiver][token] += amount;
 
         emit Transfer(msg.sender, receiver, token, amount);
     }
 
     function transferPointsFrom(address owner, address receiver, address token, uint256 amount) external {
-        require((_allowances[owner][msg.sender][token] -= amount) <= (uint256(-1) - amount), "INSUFFICIENT_ALLOWANCE");
-        require((_points[owner][token] -= amount) <= (uint256(-1) - amount), "INSUFFICIENT_BALANCE");
-            
+        require(_allowances[owner][msg.sender][token] >= amount, "INSUFFICIENT_ALLOWANCE");
+        require(_points[owner][token] >= amount, "INSUFFICIENT_BALANCE");
+
+        _allowances[owner][msg.sender][token] -= amount; 
+        _points[owner][token] -= amount;
+
         _points[receiver][token] += amount;
 
         emit Transfer(owner, receiver, token, amount);
@@ -308,7 +316,7 @@ contract DEX is IDEX, OrcaniaMath{
     //Internal Functions===============================================================================================================================
 
     function SwapTokenForOCA(address token, uint256 amountIn) internal returns(uint256 amountOut) {
-        amountOut = mul(amountIn, _tokenOCAbalance[token], 999) / mul( IERC20(token).balanceOf(address(this)), 1000);
+        amountOut = (amountIn * _tokenOCAbalance[token] * 999) / ( IERC20(token).balanceOf(address(this)) * 1000);
 
         _tokenOCAbalance[token] -= amountOut;
 
@@ -316,7 +324,7 @@ contract DEX is IDEX, OrcaniaMath{
     }
 
     function SwapOCAForToken(address token, uint256 amountIn) internal returns(uint256 amountOut) {
-        amountOut = mul(amountIn, IERC20(token).balanceOf(address(this)), 999) / ((_tokenOCAbalance[token] += amountIn) * 1000);
+        amountOut = (amountIn * IERC20(token).balanceOf(address(this)) * 999) / ((_tokenOCAbalance[token] += amountIn) * 1000);
             
         emit Swap(msg.sender, OCAaddress, token, amountIn, amountOut);
     }
