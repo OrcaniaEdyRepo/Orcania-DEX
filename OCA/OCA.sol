@@ -55,12 +55,7 @@ contract OCA is IOCA, OMS, OrcaniaMath {
     mapping (address => uint256) private _balances;
     mapping (address/*owner*/ => mapping(address/*spender*/ => uint256/*amount*/)) private _allowances;
     
-    uint256 private _totalSupply = 37500000 * 10**18;
-    
-    constructor ()  {
-         _balances[msg.sender] = _totalSupply;
-         emit Transfer(address(0), msg.sender, _totalSupply);
-    }
+    uint256 private _totalSupply;
 
     //Read functions=========================================================================================================================
     function name() external view override returns (string memory) {
