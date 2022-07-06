@@ -103,7 +103,7 @@ contract DEX is IDEX {
         uint256 amountOut1 = SwapOCAForToken(tokenOut, amountOut);
 
         require(amountOut1 >= minAmountOut, "INSUFFICIENT_OUTPUT_AMOUNT");
-        IERC20(tokenOut).transfer(msg.sender, amountOut1);
+        require(IERC20(tokenOut).transfer(msg.sender, amountOut1), "FAILED_TOKEN_TRANSFER");
     }
     function swapTokenForCoin(address tokenIn, uint256 amountIn, uint256 minAmountOut, uint256 deadLine) external {
         require(block.timestamp < deadLine, "OUT_OF_TIME");
@@ -135,7 +135,7 @@ contract DEX is IDEX {
 
         require(amountOut1 >= minAmountOut, "INSUFFICIENT_OUTPUT_AMOUNT");
 
-        IERC20(tokenIn).transfer(msg.sender, amountOut1);
+        require(IERC20(tokenIn).transfer(msg.sender, amountOut1), "FAILED_TOKEN_TRANSFER");
     }
 
     function swapOCAForToken(address tokenIn, uint256 amountIn, uint256 minAmountOut, uint256 deadLine) external {
@@ -147,7 +147,7 @@ contract DEX is IDEX {
 
         require(amountOut >= minAmountOut, "INSUFFICIENT_OUTPUT_AMOUNT");
 
-        IERC20(tokenIn).transfer(msg.sender, amountOut);
+        require(IERC20(tokenIn).transfer(msg.sender, amountOut), "FAILED_TOKEN_TRANSFER");
     }
     function swapOCAForCoin(uint256 amountIn, uint256 minAmountOut, uint256 deadLine) external {
         require(block.timestamp < deadLine, "OUT_OF_TIME");
@@ -166,10 +166,10 @@ contract DEX is IDEX {
         require(amount > 0 && OCAamount > 0, "INSUFFICIENT_AMOUNT");
         require(_totalPoints[token] == 0, "LIQUIDITY_ALREADY_SET");
             
-        IERC20(token).transferFrom(msg.sender, address(this), amount);
+        require(IERC20(token).transferFrom(msg.sender, address(this), amount), "FAILED_TOKEN_TRANSFER");
         OCA.transferFrom(msg.sender, address(this), OCAamount);
         
-        uint256 userPoints = (OCAamount * 9999) / 10000; 
+        uint256 userPoints = (OCAamount * 9999) / 10000; //0.01% fee, locked in the DEX
         
         _tokenOCAbalance[token] = OCAamount;
 
@@ -190,13 +190,13 @@ contract DEX is IDEX {
 
         require (neededOCA > 0 || earnedPoints > 0, "LOW_LIQUIDITY_ADDITION");
 
-        IERC20(token).transferFrom(msg.sender, address(this), amount);
+        require(IERC20(token).transferFrom(msg.sender, address(this), amount), "FAILED_TOKEN_TRANSFER");
         OCA.transferFrom(msg.sender, address(this), neededOCA);
 
         _tokenOCAbalance[token] += neededOCA;
 
         _totalPoints[token] = totalPoints + earnedPoints;
-        uint256 userPoints = (earnedPoints * 9999) / 10000;
+        uint256 userPoints = (earnedPoints * 9999) / 10000; //0.01% fee, locked in the DEX
 
         _points[msg.sender][token] += userPoints;
         _points[address(this)][token] += earnedPoints - userPoints;
@@ -216,7 +216,7 @@ contract DEX is IDEX {
             
         _tokenOCAbalance[token] -= cfcAmount;
         
-        IERC20(token).transfer(msg.sender, tokenAmount);
+        require(IERC20(token).transfer(msg.sender, tokenAmount), "FAILED_TOKEN_TRANSFER");
         OCA.transfer(msg.sender, cfcAmount);
 
         emit WithdrawLiquidity(msg.sender, token, points);    
