@@ -21,31 +21,6 @@ interface IDEX {
 
 }
 
-// abstract contract OrcaniaMath {
-
-//     function add(uint256 num1, uint256 num2) internal view returns(uint256 sum) {
-//         sum = num1 + num2;
-//         require(sum > num1, "OVERFLOW");
-//     }
-
-//     function sub(uint256 num1, uint256 num2) internal view returns(uint256 out) {
-//         out = num1 - num2;
-//         require(num1 > out, "UNDERFLOW");
-//     }
-
-//     function mul(uint256 num1, uint256 num2) internal view returns(uint256 out) {
-//         out = num1 * num2;
-//         require(out / num1 == num2, "OVERFLOW");
-//     }
-//     function mul(uint256 num1, uint256 num2, uint256 num3) internal view returns(uint256 out1) {
-//         uint256 out = num1 * num2;
-//         require(out / num1 == num2, "OVERFLOW");
-//         out1 = out * num3;
-//         require(out1 / out == num3, "OVERFLOW");
-//     }
-
-// }
-
 contract DEX is IDEX {
     
     IERC20 immutable OCA;
@@ -170,14 +145,16 @@ contract DEX is IDEX {
         OCA.transferFrom(msg.sender, address(this), OCAamount);
         
         uint256 userPoints = (OCAamount * 9999) / 10000; //0.01% fee, locked in the DEX
+        uint256 dexPoints = OCAamount - userPoints;
         
         _tokenOCAbalance[token] = OCAamount;
 
         _points[msg.sender][token] = userPoints;
-        _points[address(this)][token] = OCAamount - userPoints;
+        _points[address(this)][token] = dexPoints;
         _totalPoints[token] = OCAamount;
             
         emit SetLiquidity(msg.sender, token, amount, OCAamount);
+        emit AddLiquidity(address(this), token, dexPoints);
     }
     function addLiquidity(address token, uint256 amount) external {
         require(amount > 0, "INSUFFICIENT_AMOUNT");
@@ -197,10 +174,13 @@ contract DEX is IDEX {
 
         _totalPoints[token] = totalPoints + earnedPoints;
         uint256 userPoints = (earnedPoints * 9999) / 10000; //0.01% fee, locked in the DEX
+        uint256 dexPoints = earnedPoints - userPoints;
 
         _points[msg.sender][token] += userPoints;
-        _points[address(this)][token] += earnedPoints - userPoints;
-        emit AddLiquidity(msg.sender, token, earnedPoints);
+        _points[address(this)][token] += dexPoints;
+
+        emit AddLiquidity(msg.sender, token, userPoints);
+        emit AddLiquidity(address(this), token, dexPoints);
     }
     function withdrawLiquidity(address token, uint256 points) external {
         require(points > 0, "INSUFFICIENT_AMOUNT");
@@ -229,14 +209,16 @@ contract DEX is IDEX {
         OCA.transferFrom(msg.sender, address(this), OCAamount);
         
         uint256 userPoints = (OCAamount * 9999) / 10000; 
+        uint256 dexPoints = OCAamount - userPoints;
         
         _tokenOCAbalance[address(0)] = OCAamount;
 
         _points[msg.sender][address(0)] = userPoints;
-        _points[address(this)][address(0)] = OCAamount - userPoints;
+        _points[address(this)][address(0)] = dexPoints;
         _totalPoints[address(0)] = OCAamount;
             
         emit SetLiquidity(msg.sender, address(0), msg.value, OCAamount);
+        emit AddLiquidity(address(this), address(0), dexPoints);
     }
     function addCoinLiquidity() external payable {
         require(msg.value > 0, "INSUFFICIENT_AMOUNT");
@@ -253,11 +235,13 @@ contract DEX is IDEX {
 
         _totalPoints[address(0)] = _totalPoints[address(0)] + earnedPoints;
         uint256 userPoints = (earnedPoints * 9999) / 10000;
+        uint256 dexPoints = earnedPoints - userPoints;
 
         _points[msg.sender][address(0)] += userPoints;
-        _points[address(this)][address(0)] += earnedPoints - userPoints;
+        _points[address(this)][address(0)] += dexPoints;
             
         emit AddLiquidity(msg.sender, address(0), userPoints);
+        emit AddLiquidity(address(this), address(0), dexPoints);
     }
     function withdrawCoinLiquidity(uint256 points) external  {
         require(points > 0, "INSUFFICIENT_AMOUNT");
