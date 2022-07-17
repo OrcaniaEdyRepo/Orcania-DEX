@@ -102,27 +102,27 @@ contract DEX is IDEX {
 
         OCA.transfer(msg.sender, amountOut);
     }
-    function swapCoinForToken(address tokenIn, uint256 minAmountOut, uint256 deadLine) external payable {
+    function swapCoinForToken(address tokenOut, uint256 minAmountOut, uint256 deadLine) external payable {
         require(block.timestamp < deadLine, "OUT_OF_TIME");
 
         uint256 amountOut = SwapCoinForOCA();
-        uint256 amountOut1 = SwapOCAForToken(tokenIn, amountOut);
+        uint256 amountOut1 = SwapOCAForToken(tokenOut, amountOut);
 
         require(amountOut1 >= minAmountOut, "INSUFFICIENT_OUTPUT_AMOUNT");
 
-        require(IERC20(tokenIn).transfer(msg.sender, amountOut1), "FAILED_TOKEN_TRANSFER");
+        require(IERC20(tokenOut).transfer(msg.sender, amountOut1), "FAILED_TOKEN_TRANSFER");
     }
 
-    function swapOCAForToken(address tokenIn, uint256 amountIn, uint256 minAmountOut, uint256 deadLine) external {
+    function swapOCAForToken(address tokenOut, uint256 amountIn, uint256 minAmountOut, uint256 deadLine) external {
         require(block.timestamp < deadLine, "OUT_OF_TIME");
             
         OCA.transferFrom(msg.sender, address(this), amountIn);
 
-        uint256 amountOut = SwapOCAForToken(tokenIn, amountIn);
+        uint256 amountOut = SwapOCAForToken(tokenOut, amountIn);
 
         require(amountOut >= minAmountOut, "INSUFFICIENT_OUTPUT_AMOUNT");
 
-        require(IERC20(tokenIn).transfer(msg.sender, amountOut), "FAILED_TOKEN_TRANSFER");
+        require(IERC20(tokenOut).transfer(msg.sender, amountOut), "FAILED_TOKEN_TRANSFER");
     }
     function swapOCAForCoin(uint256 amountIn, uint256 minAmountOut, uint256 deadLine) external {
         require(block.timestamp < deadLine, "OUT_OF_TIME");
