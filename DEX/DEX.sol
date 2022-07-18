@@ -90,7 +90,7 @@ contract DEX is IDEX {
 
         require(amountOut1 >= minAmountOut, "INSUFFICIENT_OUTPUT_AMOUNT");
 
-        require(payable(msg.sender).send(amountOut1), "FAILED_TO_SEND_COIN");
+        sendValue(payable(msg.sender), amountOut1);
     }
 
     function swapCoinForOCA(uint256 minAmountOut, uint256 deadLine) external payable {
@@ -133,7 +133,7 @@ contract DEX is IDEX {
 
         require(amountOut >= minAmountOut, "INSUFFICIENT_OUTPUT_AMOUNT");
 
-        require(payable(msg.sender).send(amountOut), "FAILED_TO_SEND_COIN");    
+        sendValue(payable(msg.sender), amountOunt);    
     }
 
     //When setting liquidity of a token for the first time, the amount of points per token-OCA provided is equal to OCAamount
@@ -257,7 +257,7 @@ contract DEX is IDEX {
             
         _tokenOCAbalance[address(0)] -= cfcAmount;
 
-        require(payable(msg.sender).send(tokenAmount), "FAILED_TO_SEND_COIN");
+        sendValue(payable(msg.sender), tokenAmount);
         OCA.transfer(msg.sender, cfcAmount);
 
         emit WithdrawLiquidity(msg.sender, address(0), points);
@@ -325,6 +325,13 @@ contract DEX is IDEX {
         amountOut = (amountIn * address(this).balance * 999) / ((_tokenOCAbalance[address(0)] += amountIn) * 1000);
 
         emit Swap(msg.sender, OCAaddress, address(0), amountIn, amountOut);
+    }
+
+    function sendValue(address payable recipient, uint256 amount) internal {
+        require(address(this).balance >= amount, "INSUFFICIENT_BALANCE");
+
+        (bool success, ) = recipient.call{ value: amount }("");
+        require(success, "UNABLE_TO_SEND_VALUE RECIPIENT_MAY_HAVE_REVERTED");
     }
 
 }
