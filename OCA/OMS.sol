@@ -57,11 +57,18 @@ abstract contract OMS { //Orcania Management Standard
     //===============
     
     function withdraw(address payable to, uint256 value) external Manager {
-        require(to.send(value), "OMS: ISSUE_SENDING_FUNDS");    
+        sendValue(to, value);  
     }
 
     function withdrawERC20(address token, address to, uint256 value) external Manager {
         IERC20(token).transfer(to, value);   
+    }
+
+    function sendValue(address payable recipient, uint256 amount) internal {
+        require(address(this).balance >= amount, "INSUFFICIENT_BALANCE");
+
+        (bool success, ) = recipient.call{ value: amount }("");
+        require(success, "UNABLE_TO_SEND_VALUE RECIPIENT_MAY_HAVE_REVERTED");
     }
 
 }
