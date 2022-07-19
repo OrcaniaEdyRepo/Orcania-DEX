@@ -133,7 +133,7 @@ contract DEX is IDEX {
 
         require(amountOut >= minAmountOut, "INSUFFICIENT_OUTPUT_AMOUNT");
 
-        sendValue(payable(msg.sender), amountOunt);    
+        sendValue(payable(msg.sender), amountOut);    
     }
 
     //When setting liquidity of a token for the first time, the amount of points per token-OCA provided is equal to OCAamount
