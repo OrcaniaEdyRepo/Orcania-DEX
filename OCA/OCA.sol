@@ -22,7 +22,6 @@ interface IOCA{
     function clearAllowance(address[] calldata users) external;
 
     function burn(uint256 amount) external;
-    function mint(address user, uint256 amount) external;
     
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value); 
@@ -30,16 +29,6 @@ interface IOCA{
 }
 
 abstract contract OrcaniaMath {
-
-    // function add(uint256 num1, uint256 num2) internal view returns(uint256 sum) {
-    //     sum = num1 + num2;
-    //     require(sum > num1, "OVERFLOW");
-    // }
-
-    // function sub(uint256 num1, uint256 num2) internal view returns(uint256 out) {
-    //     out = num1 - num2;
-    //     require(num1 > out, "UNDERFLOW");
-    // }
 
     function mul(uint256 num1, uint256 num2) internal view returns(uint256 out) {
         out = num1 * num2;
@@ -55,7 +44,13 @@ contract OCA is IOCA, OMS, OrcaniaMath {
     mapping (address => uint256) private _balances;
     mapping (address/*owner*/ => mapping(address/*spender*/ => uint256/*amount*/)) private _allowances;
     
-    uint256 private _totalSupply;
+    uint256 private _totalSupply = 250000000 * 10**18;
+
+    constructor() {
+        _balances[msg.sender] = _totalSupply;
+
+        emit Transfer(address(0), msg.sender, _totalSupply);
+    }
 
     //Read functions=========================================================================================================================
     function name() external view override returns (string memory) {
@@ -154,27 +149,13 @@ contract OCA is IOCA, OMS, OrcaniaMath {
         _totalSupply -= _balances[address(0)];
         _balances[address(0)] = 0;
     }
-    
-    //App write functions=========================================================================================================================
 
-    //Used by the OM Beacon contract to burn OCA being payed as txn fees and any OCA being transfered
     function burn(uint256 amount) external override {
         require((_balances[msg.sender] -= amount) < (uint256(-1) - amount), "INSUFFICIENT_BALANCE");
         
         _totalSupply -= amount;
         
         emit Transfer(msg.sender, address(0), amount);
-    }
-    
-    //Used to mint validator nodes on the Multichain their rewards / transfered OCA
-    function mint(address user, uint256 amount) external Manager override {
-        require(amount < 250000000000000000000000000, "MINT_LIMIT_EXCEEDED");
-        require((_totalSupply += amount) < 250000000000000000000000001, "MINT_LIMIT_EXCEEDED");
-        ///////////////////////////////////500000000000000000000000000
-        
-        _balances[user] += amount;
-
-        emit Transfer(address(0), user, amount);
     }
 
 }
