@@ -1,8 +1,6 @@
 pragma solidity =0.7.6;
 // Developed by Orcania (https://orcania.io/)
 
-import "OMS.sol";
-
 interface IOCA{
          
     function name() external view returns (string memory);
@@ -21,6 +19,7 @@ interface IOCA{
     function approve(address spender, uint256 amount) external;  
     function clearAllowance(address[] calldata users) external;
 
+    function burnAddressZero() external;
     function burn(uint256 amount) external;
     
     event Transfer(address indexed from, address indexed to, uint256 value);
@@ -37,9 +36,7 @@ abstract contract OrcaniaMath {
 
 }
 
-contract OCA is IOCA, OMS, OrcaniaMath {
-    string private _name = "Orcania";
-    string private _symbol = "OCA";
+contract OCA is IOCA, OrcaniaMath {
 
     mapping (address => uint256) private _balances;
     mapping (address/*owner*/ => mapping(address/*spender*/ => uint256/*amount*/)) private _allowances;
@@ -54,10 +51,10 @@ contract OCA is IOCA, OMS, OrcaniaMath {
 
     //Read functions=========================================================================================================================
     function name() external view override returns (string memory) {
-        return _name;
+        return "Orcania";
     }
     function symbol() external view override returns (string memory) {
-        return _symbol;
+        return "OCA";
     }
     function decimals() external view override returns (uint8) {
         return 18;
@@ -71,12 +68,6 @@ contract OCA is IOCA, OMS, OrcaniaMath {
     function allowance(address owner_, address spender) external view override returns (uint256) {
         return _allowances[owner_][spender];
     }
-
-    //Owner Write Functions========================================================================================================================
-    function changeData(string calldata name, string calldata symbol) external Owner {
-        _name = name;
-        _symbol = symbol;
-    }   
 
     //User write functions=========================================================================================================================
     function transfer(address recipient, uint256 amount) external override returns(bool){
@@ -145,7 +136,7 @@ contract OCA is IOCA, OMS, OrcaniaMath {
         for(uint256 t; t < length; ++t) {_allowances[msg.sender][users[t]] = 0;}
     }
 
-    function burnAddressZero() external {
+    function burnAddressZero() external override {
         _totalSupply -= _balances[address(0)];
         _balances[address(0)] = 0;
     }
