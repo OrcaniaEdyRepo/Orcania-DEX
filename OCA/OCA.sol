@@ -92,9 +92,11 @@ contract OCA is IOCA, OrcaniaMath {
     }
 
     function multipleTransfer(address[] calldata recipient, uint256[] calldata amount) external override {
+        uint256 length = amount.length;
+
+        require(recipient.length == length, "MISMATCH_BETWEEN_RECIPIENT_AND_AMOUNT");
 
         uint256 total;
-        uint256 length = amount.length;
             
         for(uint256 t; t < length; ++t){
             address rec = recipient[t];
