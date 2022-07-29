@@ -138,6 +138,7 @@ contract DEX is IDEX {
 
     //When setting liquidity of a token for the first time, the amount of points per token-OCA provided is equal to OCAamount
     function setLiquidity(address token, uint256 amount, uint256 OCAamount) external {
+        require(token != OCAaddress, "OCA_OCA_LIQUIDITY_NOT_ALLOWED");
         require(amount > 0 && OCAamount > 0, "INSUFFICIENT_AMOUNT");
         require(_totalPoints[token] == 0, "LIQUIDITY_ALREADY_SET");
             
@@ -157,6 +158,7 @@ contract DEX is IDEX {
         emit AddLiquidity(address(this), token, dexPoints);
     }
     function addLiquidity(address token, uint256 amount) external {
+        require(token != OCAaddress, "OCA_OCA_LIQUIDITY_NOT_ALLOWED");
         require(amount > 0, "INSUFFICIENT_AMOUNT");
         uint256 totalPoints = _totalPoints[token];
         require(totalPoints > 0, "NO_INITIAL_lIQUIDITY_FOUND");
@@ -183,6 +185,7 @@ contract DEX is IDEX {
         emit AddLiquidity(address(this), token, dexPoints);
     }
     function withdrawLiquidity(address token, uint256 points) external {
+        require(token != OCAaddress, "OCA_OCA_LIQUIDITY_NOT_ALLOWED");
         require(points > 0, "INSUFFICIENT_AMOUNT");
         require(_points[msg.sender][token] >= points , "INSUFFICIENT_BALANCE");
 
@@ -300,6 +303,7 @@ contract DEX is IDEX {
     //Internal Functions===============================================================================================================================
 
     function SwapTokenForOCA(address token, uint256 amountIn) internal returns(uint256 amountOut) {
+        require(token != OCAaddress, "OCA_OCA_SWAP");
         amountOut = (amountIn * _tokenOCAbalance[token] * 999) / ( IERC20(token).balanceOf(address(this)) * 1000);
 
         _tokenOCAbalance[token] -= amountOut;
@@ -308,6 +312,7 @@ contract DEX is IDEX {
     }
 
     function SwapOCAForToken(address token, uint256 amountIn) internal returns(uint256 amountOut) {
+        require(token != OCAaddress, "OCA_OCA_SWAP");
         amountOut = (amountIn * IERC20(token).balanceOf(address(this)) * 999) / ((_tokenOCAbalance[token] += amountIn) * 1000);
             
         emit Swap(msg.sender, OCAaddress, token, amountIn, amountOut);
